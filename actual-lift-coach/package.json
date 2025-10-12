@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "npm run convex:codegen && next build",
-    "convex:codegen": "convex dev --once --typecheck=disable",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },

@@ -2,9 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
 
 const MUSCLE_GROUPS = [
   "Chest",
@@ -38,11 +35,7 @@ export default function CreateWorkoutPage() {
     Array<{ setIndex: number; reps: number; rest: number; weight: number }>
   >([{ setIndex: 1, reps: 0, rest: 90, weight: 0 }]);
 
-  const [selectedExercises, setSelectedExercises] = useState<Id<"exercises">[]>([]);
-
-  const createWorkout = useMutation(api.workouts.createWorkout);
-  const createExercise = useMutation(api.exercises.createExercise);
-  const exercises = useQuery(api.exercises.getExercises);
+  const [selectedExercises, setSelectedExercises] = useState<string[]>([]);
 
   const toggleMuscle = (muscle: string) => {
     if (selectedMuscles.includes(muscle)) {
@@ -71,13 +64,7 @@ export default function CreateWorkoutPage() {
       return;
     }
 
-    const exerciseId = await createExercise({
-      name: exerciseName,
-      type: exerciseType,
-      muscleGroup: selectedMuscles,
-    });
-
-    setSelectedExercises([...selectedExercises, exerciseId]);
+    setSelectedExercises([...selectedExercises, exerciseName]);
 
     setExerciseName("");
     setSelectedMuscles([]);
@@ -91,11 +78,7 @@ export default function CreateWorkoutPage() {
       return;
     }
 
-    await createWorkout({
-      name: workoutName,
-      exerciseIds: selectedExercises,
-    });
-
+    alert("Workout created: " + workoutName);
     router.push("/");
   };
 
@@ -207,16 +190,15 @@ export default function CreateWorkoutPage() {
             <label className="block text-sm font-medium mb-2">
               Selected Exercises ({selectedExercises.length})
             </label>
-            {selectedExercises.length > 0 && exercises ? (
+            {selectedExercises.length > 0 ? (
               <div className="space-y-2">
-                {selectedExercises.map((id, index) => {
-                  const exercise = exercises.find((e) => e._id === id);
+                {selectedExercises.map((name, index) => {
                   return (
                     <div
-                      key={id}
+                      key={name}
                       className="flex items-center justify-between bg-gray-700 p-3 rounded-lg"
                     >
-                      <span>{exercise?.name || "Unknown"}</span>
+                      <span>{name}</span>
                       <button
                         onClick={() =>
                           setSelectedExercises(selectedExercises.filter((_, i) => i !== index))

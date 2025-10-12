@@ -1,14 +1,11 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../../convex/_generated/api";
 import { useState, useEffect } from "react";
-import { Id } from "../../../../convex/_generated/dataModel";
 
 type ExerciseWithSets = {
   exercise: {
-    _id: Id<"exercises">;
+    _id: string;
     name: string;
     type: "hypertrophy" | "strength";
   };
@@ -22,7 +19,6 @@ type ExerciseWithSets = {
 export default function WorkoutPage() {
   const params = useParams();
   const router = useRouter();
-  const workoutId = params.workoutId as string;
 
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
@@ -32,12 +28,10 @@ export default function WorkoutPage() {
   const [timer, setTimer] = useState<number | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
 
-  const createSet = useMutation(api.sets.createSet);
-
   const mockExercises: ExerciseWithSets[] = [
     {
       exercise: {
-        _id: "example_id" as Id<"exercises">,
+        _id: "example_id",
         name: "Bench Press",
         type: "strength",
       },
@@ -61,7 +55,7 @@ export default function WorkoutPage() {
     },
     {
       exercise: {
-        _id: "example_id_2" as Id<"exercises">,
+        _id: "example_id_2",
         name: "Incline Dumbbell Press",
         type: "hypertrophy",
       },

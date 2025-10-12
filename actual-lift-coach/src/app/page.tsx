@@ -1,11 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
 
 export default function Home() {
-  const workouts = useQuery(api.workouts.getWorkouts);
 
   const presetWorkouts = [
     "push1",
