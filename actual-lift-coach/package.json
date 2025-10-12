@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "npx convex deploy --cmd 'npm run build:next'",
-    "build:next": "next build",
+    "build": "npm run convex:codegen && next build",
+    "convex:codegen": "convex dev --once --typecheck=disable",
     "start": "next start",
     "lint": "eslint"
   },
