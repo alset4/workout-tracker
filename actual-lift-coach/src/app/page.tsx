@@ -7,15 +7,6 @@ import { api } from "../../convex/_generated/api";
 export default function Home() {
   const workouts = useQuery(api.workouts.getWorkouts);
 
-  const presetWorkouts = [
-    "push1",
-    "pull1",
-    "legs1",
-    "push2",
-    "pull2",
-    "legs2",
-  ];
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-gradient-to-b from-gray-900 to-black text-white">
       <div className="max-w-md w-full space-y-8">
@@ -25,13 +16,13 @@ export default function Home() {
         </div>
 
         <div className="space-y-4">
-          {presetWorkouts.map((workout) => (
+          {workouts?.map((workout) => (
             <Link
-              key={workout}
-              href={`/workout/${workout}`}
+              key={workout._id}
+              href={`/workout/${workout._id}`}
               className="block w-full py-4 px-6 text-center text-lg font-semibold bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
             >
-              {workout.toUpperCase()}
+              {workout.name.toUpperCase()}
             </Link>
           ))}
         </div>

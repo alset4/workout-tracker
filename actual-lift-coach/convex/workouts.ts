@@ -4,16 +4,25 @@ import { mutation, query } from "./_generated/server";
 export const createWorkout = mutation({
   args: {
     name: v.string(),
-    exerciseIds: v.array(v.id("exercises")),
+    exercises: v.array(
+      v.object({
+        name: v.string(),
+        type: v.union(v.literal("hypertrophy"), v.literal("strength")),
+        muscleGroup: v.array(v.string()),
+        sets: v.array(
+          v.object({
+            reps: v.number(),
+            rest: v.number(),
+            weight: v.optional(v.number()),
+          })
+        ),
+      })
+    ),
   },
   handler: async (ctx, args) => {
     const workoutId = await ctx.db.insert("workouts", {
       name: args.name,
-    });
-
-    await ctx.db.insert("workoutExercises", {
-      workoutId,
-      exerciseIds: args.exerciseIds,
+      exercises: args.exercises as any,
     });
 
     return workoutId;
@@ -30,28 +39,38 @@ export const getWorkoutWithExercises = query({
   args: { workoutId: v.id("workouts") },
   handler: async (ctx, args) => {
     const workout = await ctx.db.get(args.workoutId);
-    if (!workout) return null;
-
-    const workoutExercise = await ctx.db
-      .query("workoutExercises")
-      .withIndex("by_workout", (q) => q.eq("workoutId", args.workoutId))
-      .first();
-
-    if (!workoutExercise) return { ...workout, exercises: [] };
-
-    const exercises = await Promise.all(
-      workoutExercise.exerciseIds.map((id) => ctx.db.get(id))
-    );
-
-    return { ...workout, exercises: exercises.filter((e) => e !== null) };
+    return workout;
   },
 });
 
 export const completeWorkout = mutation({
-  args: { workoutId: v.id("workouts") },
+  args: {
+    workoutId: v.id("workouts"),
+    exercises: v.array(
+      v.object({
+        name: v.string(),
+        type: v.union(v.literal("hypertrophy"), v.literal("strength")),
+        muscleGroup: v.array(v.string()),
+        completedSets: v.array(
+          v.object({
+            reps: v.number(),
+            rest: v.number(),
+            weight: v.number(),
+            rpe: v.number(),
+          })
+        ),
+      })
+    ),
+  },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.workoutId, {
+    const workout = await ctx.db.get(args.workoutId);
+    if (!workout) throw new Error("Workout not found");
+
+    await ctx.db.insert("completedWorkouts", {
+      workoutId: args.workoutId,
+      workoutName: workout.name,
       completedAt: Date.now(),
+      exercises: args.exercises as any,
     });
   },
 });

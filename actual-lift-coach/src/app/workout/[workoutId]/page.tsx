@@ -6,16 +6,14 @@ import { api } from "../../../../convex/_generated/api";
 import { useState, useEffect } from "react";
 import { Id } from "../../../../convex/_generated/dataModel";
 
-type ExerciseWithSets = {
-  exercise: {
-    _id: Id<"exercises">;
-    name: string;
-    type: "hypertrophy" | "strength";
-  };
+type Exercise = {
+  name: string;
+  type: "hypertrophy" | "strength";
+  muscleGroup: string[];
   sets: Array<{
-    setIndex: number;
-    lastWeek: { reps: number; weight: number; rpe: number } | null;
-    suggested: { reps: number; weight: number };
+    reps: number;
+    rest: number;
+    weight?: number;
   }>;
 };
 
@@ -32,60 +30,29 @@ export default function WorkoutPage() {
   const [timer, setTimer] = useState<number | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
 
-  const createSet = useMutation(api.sets.createSet);
+  const workout = useQuery(api.workouts.getWorkoutWithExercises, {
+    workoutId: workoutId as Id<"workouts">,
+  });
+  const completeWorkout = useMutation(api.workouts.completeWorkout);
 
-  const mockExercises: ExerciseWithSets[] = [
-    {
-      exercise: {
-        _id: "example_id" as Id<"exercises">,
-        name: "Bench Press",
-        type: "strength",
-      },
-      sets: [
-        {
-          setIndex: 1,
-          lastWeek: { reps: 5, weight: 185, rpe: 8 },
-          suggested: { reps: 5, weight: 190 },
-        },
-        {
-          setIndex: 2,
-          lastWeek: { reps: 5, weight: 185, rpe: 8 },
-          suggested: { reps: 5, weight: 190 },
-        },
-        {
-          setIndex: 3,
-          lastWeek: { reps: 4, weight: 185, rpe: 9 },
-          suggested: { reps: 5, weight: 190 },
-        },
-      ],
-    },
-    {
-      exercise: {
-        _id: "example_id_2" as Id<"exercises">,
-        name: "Incline Dumbbell Press",
-        type: "hypertrophy",
-      },
-      sets: [
-        {
-          setIndex: 1,
-          lastWeek: { reps: 10, weight: 70, rpe: 7 },
-          suggested: { reps: 12, weight: 70 },
-        },
-        {
-          setIndex: 2,
-          lastWeek: { reps: 10, weight: 70, rpe: 8 },
-          suggested: { reps: 12, weight: 70 },
-        },
-        {
-          setIndex: 3,
-          lastWeek: { reps: 9, weight: 70, rpe: 9 },
-          suggested: { reps: 12, weight: 70 },
-        },
-      ],
-    },
-  ];
+  const [completedExercises, setCompletedExercises] = useState<
+    Array<{
+      name: string;
+      type: "hypertrophy" | "strength";
+      muscleGroup: string[];
+      completedSets: Array<{
+        reps: number;
+        rest: number;
+        weight: number;
+        rpe: number;
+      }>;
+    }>
+  >([]);
+  const [currentExerciseSets, setCurrentExerciseSets] = useState<
+    Array<{ reps: number; rest: number; weight: number; rpe: number }>
+  >([]);
 
-  const currentExercise = mockExercises[currentExerciseIndex];
+  const currentExercise = workout?.exercises[currentExerciseIndex];
   const currentSet = currentExercise?.sets[currentSetIndex];
 
   useEffect(() => {
@@ -101,25 +68,54 @@ export default function WorkoutPage() {
   }, [isTimerRunning, timer]);
 
   const handleNextSet = async () => {
-    if (!reps || !weight || !rpe) {
+    if (!reps || !weight || !rpe || !currentExercise) {
       alert("Please fill in all fields");
       return;
     }
+
+    const completedSet = {
+      reps: parseInt(reps),
+      rest: currentSet?.rest || 90,
+      weight: parseInt(weight),
+      rpe: parseInt(rpe),
+    };
+
+    setCurrentExerciseSets([...currentExerciseSets, completedSet]);
 
     if (currentSetIndex < currentExercise.sets.length - 1) {
       setCurrentSetIndex(currentSetIndex + 1);
       setReps("");
       setWeight("");
       setRpe("");
-      setTimer(90);
+      setTimer(currentExercise.sets[currentSetIndex + 1]?.rest || 90);
       setIsTimerRunning(true);
     } else {
-      handleNextExercise();
+      handleNextExercise(completedSet);
     }
   };
 
-  const handleNextExercise = () => {
-    if (currentExerciseIndex < mockExercises.length - 1) {
+  const handleNextExercise = async (lastSet?: {
+    reps: number;
+    rest: number;
+    weight: number;
+    rpe: number;
+  }) => {
+    if (!currentExercise) return;
+
+    const allSets = lastSet ? [...currentExerciseSets, lastSet] : currentExerciseSets;
+
+    const completedExercise = {
+      name: currentExercise.name,
+      type: currentExercise.type,
+      muscleGroup: currentExercise.muscleGroup,
+      completedSets: allSets,
+    };
+
+    const newCompletedExercises = [...completedExercises, completedExercise];
+    setCompletedExercises(newCompletedExercises);
+    setCurrentExerciseSets([]);
+
+    if (workout && currentExerciseIndex < workout.exercises.length - 1) {
       setCurrentExerciseIndex(currentExerciseIndex + 1);
       setCurrentSetIndex(0);
       setReps("");
@@ -128,7 +124,11 @@ export default function WorkoutPage() {
       setTimer(null);
       setIsTimerRunning(false);
     } else {
-      router.push("/complete");
+      await completeWorkout({
+        workoutId: workoutId as Id<"workouts">,
+        exercises: newCompletedExercises,
+      });
+      router.push("/");
     }
   };
 
@@ -156,12 +156,12 @@ export default function WorkoutPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-gradient-to-b from-gray-900 to-black text-white">
       <div className="max-w-md w-full space-y-6">
         <div className="text-center">
-          <h1 className="text-3xl font-bold">{currentExercise.exercise.name}</h1>
+          <h1 className="text-3xl font-bold">{currentExercise?.name}</h1>
           <p className="text-gray-400 mt-2">
-            Set {currentSetIndex + 1} of {currentExercise.sets.length}
+            Set {currentSetIndex + 1} of {currentExercise?.sets.length}
           </p>
           <p className="text-sm text-gray-500 mt-1">
-            Exercise {currentExerciseIndex + 1} of {mockExercises.length}
+            Exercise {currentExerciseIndex + 1} of {workout?.exercises.length}
           </p>
         </div>
 
@@ -176,21 +176,12 @@ export default function WorkoutPage() {
 
         <div className="bg-gray-800 p-6 rounded-lg space-y-4">
           <div>
-            <h3 className="text-lg font-semibold mb-2">Last Week</h3>
-            {currentSet.lastWeek ? (
-              <p className="text-gray-300">
-                {currentSet.lastWeek.reps} reps @ {currentSet.lastWeek.weight} lbs
-                (RPE: {currentSet.lastWeek.rpe})
-              </p>
-            ) : (
-              <p className="text-gray-500">No data</p>
-            )}
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold mb-2">Suggested</h3>
+            <h3 className="text-lg font-semibold mb-2">Target</h3>
             <p className="text-green-400 font-bold">
-              {currentSet.suggested.reps} reps @ {currentSet.suggested.weight} lbs
+              {currentSet?.reps} reps @ {currentSet?.weight || 0} lbs
+            </p>
+            <p className="text-gray-400 text-sm mt-1">
+              Rest: {currentSet?.rest || 90}s
             </p>
           </div>
 

@@ -34,15 +34,18 @@ export default function CreateWorkoutPage() {
   const [exerciseName, setExerciseName] = useState("");
   const [exerciseType, setExerciseType] = useState<"hypertrophy" | "strength">("hypertrophy");
   const [selectedMuscles, setSelectedMuscles] = useState<string[]>([]);
-  const [sets, setSets] = useState<
-    Array<{ setIndex: number; reps: number; rest: number; weight: number }>
-  >([{ setIndex: 1, reps: 0, rest: 90, weight: 0 }]);
+  const [numSets, setNumSets] = useState(3);
 
-  const [selectedExercises, setSelectedExercises] = useState<Id<"exercises">[]>([]);
+  const [selectedExercises, setSelectedExercises] = useState<
+    Array<{
+      name: string;
+      type: "hypertrophy" | "strength";
+      muscleGroup: string[];
+      sets: Array<{ reps: number; rest: number; weight?: number }>;
+    }>
+  >([]);
 
   const createWorkout = useMutation(api.workouts.createWorkout);
-  const createExercise = useMutation(api.exercises.createExercise);
-  const exercises = useQuery(api.exercises.getExercises);
 
   const toggleMuscle = (muscle: string) => {
     if (selectedMuscles.includes(muscle)) {
@@ -52,36 +55,31 @@ export default function CreateWorkoutPage() {
     }
   };
 
-  const addSet = () => {
-    setSets([
-      ...sets,
-      { setIndex: sets.length + 1, reps: 0, rest: 90, weight: 0 },
-    ]);
-  };
-
-  const updateSet = (index: number, field: string, value: number) => {
-    const newSets = [...sets];
-    newSets[index] = { ...newSets[index], [field]: value };
-    setSets(newSets);
-  };
-
-  const handleCreateExercise = async () => {
+  const handleCreateExercise = () => {
     if (!exerciseName || selectedMuscles.length === 0) {
       alert("Please fill in exercise name and select at least one muscle group");
       return;
     }
 
-    const exerciseId = await createExercise({
-      name: exerciseName,
-      type: exerciseType,
-      muscleGroup: selectedMuscles,
-    });
+    const sets = Array.from({ length: numSets }, () => ({
+      reps: 0,
+      rest: 90,
+      weight: 0,
+    }));
 
-    setSelectedExercises([...selectedExercises, exerciseId]);
+    setSelectedExercises([
+      ...selectedExercises,
+      {
+        name: exerciseName,
+        type: exerciseType,
+        muscleGroup: selectedMuscles,
+        sets,
+      },
+    ]);
 
     setExerciseName("");
     setSelectedMuscles([]);
-    setSets([{ setIndex: 1, reps: 0, rest: 90, weight: 0 }]);
+    setNumSets(3);
     setStep("workout");
   };
 
@@ -93,7 +91,7 @@ export default function CreateWorkoutPage() {
 
     await createWorkout({
       name: workoutName,
-      exerciseIds: selectedExercises,
+      exercises: selectedExercises,
     });
 
     router.push("/");
@@ -163,6 +161,18 @@ export default function CreateWorkoutPage() {
                 ))}
               </div>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Number of Sets</label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={numSets}
+                onChange={(e) => setNumSets(parseInt(e.target.value) || 1)}
+                className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
 
           <div className="flex gap-4">
@@ -207,27 +217,29 @@ export default function CreateWorkoutPage() {
             <label className="block text-sm font-medium mb-2">
               Selected Exercises ({selectedExercises.length})
             </label>
-            {selectedExercises.length > 0 && exercises ? (
+            {selectedExercises.length > 0 ? (
               <div className="space-y-2">
-                {selectedExercises.map((id, index) => {
-                  const exercise = exercises.find((e) => e._id === id);
-                  return (
-                    <div
-                      key={id}
-                      className="flex items-center justify-between bg-gray-700 p-3 rounded-lg"
-                    >
-                      <span>{exercise?.name || "Unknown"}</span>
-                      <button
-                        onClick={() =>
-                          setSelectedExercises(selectedExercises.filter((_, i) => i !== index))
-                        }
-                        className="text-red-500 hover:text-red-400"
-                      >
-                        Remove
-                      </button>
+                {selectedExercises.map((exercise, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between bg-gray-700 p-3 rounded-lg"
+                  >
+                    <div>
+                      <span className="font-semibold">{exercise.name}</span>
+                      <span className="text-sm text-gray-400 ml-2">
+                        ({exercise.sets.length} sets)
+                      </span>
                     </div>
-                  );
-                })}
+                    <button
+                      onClick={() =>
+                        setSelectedExercises(selectedExercises.filter((_, i) => i !== index))
+                      }
+                      className="text-red-500 hover:text-red-400"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="text-gray-500 text-sm">No exercises added yet</p>
