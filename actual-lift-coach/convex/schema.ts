@@ -2,6 +2,12 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  exercises: defineTable({
+    name: v.string(),
+    type: v.union(v.literal("hypertrophy"), v.literal("strength")),
+    muscleGroup: v.array(v.string()),
+  }),
+
   workouts: defineTable({
     name: v.string(),
     exercises: v.array(

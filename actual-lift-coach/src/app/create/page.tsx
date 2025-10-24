@@ -35,6 +35,8 @@ export default function CreateWorkoutPage() {
   const [exerciseType, setExerciseType] = useState<"hypertrophy" | "strength">("hypertrophy");
   const [selectedMuscles, setSelectedMuscles] = useState<string[]>([]);
   const [numSets, setNumSets] = useState(3);
+  const [useExistingExercise, setUseExistingExercise] = useState(false);
+  const [selectedExerciseId, setSelectedExerciseId] = useState("");
 
   const [selectedExercises, setSelectedExercises] = useState<
     Array<{
@@ -46,6 +48,7 @@ export default function CreateWorkoutPage() {
   >([]);
 
   const createWorkout = useMutation(api.workouts.createWorkout);
+  const existingExercises = useQuery(api.exercises.getExercises);
 
   const toggleMuscle = (muscle: string) => {
     if (selectedMuscles.includes(muscle)) {
@@ -56,29 +59,57 @@ export default function CreateWorkoutPage() {
   };
 
   const handleCreateExercise = () => {
-    if (!exerciseName || selectedMuscles.length === 0) {
-      alert("Please fill in exercise name and select at least one muscle group");
-      return;
+    if (useExistingExercise) {
+      if (!selectedExerciseId) {
+        alert("Please select an exercise");
+        return;
+      }
+
+      const exercise = existingExercises?.find((ex) => ex._id === selectedExerciseId);
+      if (!exercise) return;
+
+      const sets = Array.from({ length: numSets }, () => ({
+        reps: 0,
+        rest: 90,
+        weight: 0,
+      }));
+
+      setSelectedExercises([
+        ...selectedExercises,
+        {
+          name: exercise.name,
+          type: exercise.type,
+          muscleGroup: exercise.muscleGroup,
+          sets,
+        },
+      ]);
+    } else {
+      if (!exerciseName || selectedMuscles.length === 0) {
+        alert("Please fill in exercise name and select at least one muscle group");
+        return;
+      }
+
+      const sets = Array.from({ length: numSets }, () => ({
+        reps: 0,
+        rest: 90,
+        weight: 0,
+      }));
+
+      setSelectedExercises([
+        ...selectedExercises,
+        {
+          name: exerciseName,
+          type: exerciseType,
+          muscleGroup: selectedMuscles,
+          sets,
+        },
+      ]);
     }
-
-    const sets = Array.from({ length: numSets }, () => ({
-      reps: 0,
-      rest: 90,
-      weight: 0,
-    }));
-
-    setSelectedExercises([
-      ...selectedExercises,
-      {
-        name: exerciseName,
-        type: exerciseType,
-        muscleGroup: selectedMuscles,
-        sets,
-      },
-    ]);
 
     setExerciseName("");
     setSelectedMuscles([]);
+    setSelectedExerciseId("");
+    setUseExistingExercise(false);
     setNumSets(3);
     setStep("workout");
   };
@@ -107,60 +138,106 @@ export default function CreateWorkoutPage() {
 
           <div className="bg-gray-800 p-6 rounded-lg space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Exercise Name</label>
-              <input
-                type="text"
-                value={exerciseName}
-                onChange={(e) => setExerciseName(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., Bench Press"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Type</label>
+              <label className="block text-sm font-medium mb-2">Exercise Source</label>
               <div className="flex gap-4">
                 <button
-                  onClick={() => setExerciseType("hypertrophy")}
+                  onClick={() => setUseExistingExercise(false)}
                   className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${
-                    exerciseType === "hypertrophy"
+                    !useExistingExercise
                       ? "bg-blue-600"
                       : "bg-gray-700 hover:bg-gray-600"
                   }`}
                 >
-                  Hypertrophy
+                  Create New
                 </button>
                 <button
-                  onClick={() => setExerciseType("strength")}
+                  onClick={() => setUseExistingExercise(true)}
                   className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${
-                    exerciseType === "strength"
+                    useExistingExercise
                       ? "bg-blue-600"
                       : "bg-gray-700 hover:bg-gray-600"
                   }`}
                 >
-                  Strength
+                  Use Existing
                 </button>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Muscle Groups</label>
-              <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
-                {MUSCLE_GROUPS.map((muscle) => (
-                  <button
-                    key={muscle}
-                    onClick={() => toggleMuscle(muscle)}
-                    className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                      selectedMuscles.includes(muscle)
-                        ? "bg-green-600"
-                        : "bg-gray-700 hover:bg-gray-600"
-                    }`}
-                  >
-                    {muscle}
-                  </button>
-                ))}
+            {useExistingExercise ? (
+              <div>
+                <label className="block text-sm font-medium mb-2">Select Exercise</label>
+                <select
+                  value={selectedExerciseId}
+                  onChange={(e) => setSelectedExerciseId(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Choose an exercise...</option>
+                  {existingExercises?.map((exercise) => (
+                    <option key={exercise._id} value={exercise._id}>
+                      {exercise.name} ({exercise.type})
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Exercise Name</label>
+                  <input
+                    type="text"
+                    value={exerciseName}
+                    onChange={(e) => setExerciseName(e.target.value)}
+                    className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., Bench Press"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Type</label>
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setExerciseType("hypertrophy")}
+                      className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${
+                        exerciseType === "hypertrophy"
+                          ? "bg-blue-600"
+                          : "bg-gray-700 hover:bg-gray-600"
+                      }`}
+                    >
+                      Hypertrophy
+                    </button>
+                    <button
+                      onClick={() => setExerciseType("strength")}
+                      className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${
+                        exerciseType === "strength"
+                          ? "bg-blue-600"
+                          : "bg-gray-700 hover:bg-gray-600"
+                      }`}
+                    >
+                      Strength
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Muscle Groups</label>
+                  <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                    {MUSCLE_GROUPS.map((muscle) => (
+                      <button
+                        key={muscle}
+                        onClick={() => toggleMuscle(muscle)}
+                        className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                          selectedMuscles.includes(muscle)
+                            ? "bg-green-600"
+                            : "bg-gray-700 hover:bg-gray-600"
+                        }`}
+                      >
+                        {muscle}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
 
             <div>
               <label className="block text-sm font-medium mb-2">Number of Sets</label>

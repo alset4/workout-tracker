@@ -136,6 +136,31 @@ export default function WorkoutPage() {
     handleNextExercise();
   };
 
+  const handlePreviousSet = () => {
+    if (currentSetIndex > 0) {
+      const previousSet = currentExerciseSets[currentExerciseSets.length - 1];
+      setCurrentExerciseSets(currentExerciseSets.slice(0, -1));
+      setCurrentSetIndex(currentSetIndex - 1);
+      setReps(previousSet.reps.toString());
+      setWeight(previousSet.weight.toString());
+      setRpe(previousSet.rpe.toString());
+      setTimer(null);
+      setIsTimerRunning(false);
+    } else if (completedExercises.length > 0) {
+      const previousExercise = completedExercises[completedExercises.length - 1];
+      setCompletedExercises(completedExercises.slice(0, -1));
+      setCurrentExerciseIndex(currentExerciseIndex - 1);
+      setCurrentExerciseSets(previousExercise.completedSets.slice(0, -1));
+      setCurrentSetIndex(previousExercise.completedSets.length - 1);
+      const lastSet = previousExercise.completedSets[previousExercise.completedSets.length - 1];
+      setReps(lastSet.reps.toString());
+      setWeight(lastSet.weight.toString());
+      setRpe(lastSet.rpe.toString());
+      setTimer(null);
+      setIsTimerRunning(false);
+    }
+  };
+
   if (!currentExercise) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-black text-white">
@@ -185,6 +210,16 @@ export default function WorkoutPage() {
             </p>
           </div>
 
+          <div>
+              <label className="block text-sm font-medium mb-1">Weight (lbs)</label>
+              <input
+                type="number"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter weight"
+              />
+          </div>
           <div className="space-y-3 pt-4">
             <div>
               <label className="block text-sm font-medium mb-1">Reps</label>
@@ -194,17 +229,6 @@ export default function WorkoutPage() {
                 onChange={(e) => setReps(e.target.value)}
                 className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Enter reps"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Weight (lbs)</label>
-              <input
-                type="number"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter weight"
               />
             </div>
 
@@ -237,6 +261,14 @@ export default function WorkoutPage() {
             {currentSetIndex < currentExercise.sets.length - 1 ? "Next Set" : "Next Exercise"}
           </button>
         </div>
+        {(currentSetIndex > 0 || completedExercises.length > 0) && (
+          <button
+            onClick={handlePreviousSet}
+            className="w-full py-3 px-6 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-colors"
+          >
+            Previous
+          </button>
+        )}
       </div>
     </div>
   );
