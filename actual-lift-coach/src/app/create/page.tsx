@@ -2,9 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
 
 const MUSCLE_GROUPS = [
   "Chest",
@@ -294,6 +291,7 @@ export default function CreateWorkoutPage() {
             <label className="block text-sm font-medium mb-2">
               Selected Exercises ({selectedExercises.length})
             </label>
+            {selectedExercises.length > 0 ? (
             {selectedExercises.length > 0 ? (
               <div className="space-y-2">
                 {selectedExercises.map((exercise, index) => (
