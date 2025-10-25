@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 export default function Home() {
+  const workouts = useQuery(api.workouts.getWorkouts);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-gradient-to-b from-gray-900 to-black text-white">

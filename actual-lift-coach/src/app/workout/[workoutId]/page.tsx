@@ -1,7 +1,10 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { useState, useEffect } from "react";
+import { Id } from "../../../../convex/_generated/dataModel";
 
 type Exercise = {
   name: string;
@@ -17,6 +20,7 @@ type Exercise = {
 export default function WorkoutPage() {
   const params = useParams();
   const router = useRouter();
+  const workoutId = params.workoutId as string;
 
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
